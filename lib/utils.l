@@ -137,8 +137,6 @@
     [#true (cons s (#lambda (+ s i) e i))]
 )) (get #args 1) (get #args 2) (if (length-eq #args 3) (get #args 3) 1)))))
 
-; TODO: 更改此处代码
-; this
 (export take (define take (lambda [n fn] ((lambda [i] (cond
     [(> i n) []]
     [#true (cons (fn) (#lambda (inc i)))]

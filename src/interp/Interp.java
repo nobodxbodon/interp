@@ -91,10 +91,12 @@ public class Interp {
 
 class LibInterp {
 
-    private static final Stack<Path> PATH_STACK = new Stack<>();
+    private static final Stack<Path> PathStack = new Stack<>();
+    private static final Path InterpHome;
 
     static {
-        PATH_STACK.push(Paths.get(".").toAbsolutePath().normalize());
+        PathStack.push(Paths.get(".").toAbsolutePath().normalize());
+        InterpHome = Paths.get("C:\\Users\\NER0\\IdeaProjects\\interp\\lib");
     }
 
     public static Node aio(String code, Env env) throws InterpSystemExit, InterpSystemError {
@@ -715,12 +717,17 @@ class LibInterp {
 
                             String path = L.get(0).getValueString();
                             String prefix = L.size() == 2 ? L.get(1).getValueString() : "";
+                            Path a;
 
-                            Path a = PATH_STACK.peek().resolve(path).normalize();
+                            if (path.startsWith("/") || path.startsWith("\\")){
+                                a = InterpHome.resolve(path.substring(1)).normalize();
+                            }else {
+                                a = PathStack.peek().resolve(path).normalize();
+                            }
 
                             Env env_import;
 
-                            PATH_STACK.push(a.getParent());
+                            PathStack.push(a.getParent());
 
                             try {
 
@@ -733,7 +740,7 @@ class LibInterp {
 
                             } finally {
 
-                                PATH_STACK.pop();
+                                PathStack.pop();
                             }
 
                             env._import(env_import, prefix);
@@ -1441,6 +1448,7 @@ class Env {
 
         this.parent = ENV;
         this.define = new HashMap<>();
+        this.export = new HashMap<>();
     }
 
     public Env grow() {
@@ -1515,8 +1523,6 @@ class Env {
     }
 
     public void export(String name, Node value) throws InterpSystemError {
-
-        if (this.export == null) this.export = new HashMap<>();
 
         if (this.export.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExport, name));
 
