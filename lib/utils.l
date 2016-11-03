@@ -148,6 +148,8 @@
 (export length-eq (define length-eq (lambda [L n] (eq (length L) n))))
 (export type-eq (define type-eq   (lambda [o t] (eq (type o) t))))
 
+(export println (define println (lambda [] (progn (apply output #args) (output "%n")))))
+
 (define quick-sort (lambda [L Fn] (cond
     [(<= (length L) 1) L]
     [#true (merge
@@ -158,5 +160,3 @@
 )))
 
 (export qsort (define qsort (lambda [L] (quick-sort L const))))
-
-(export println (define println (lambda [] (progn (apply output #args) (output "%n")))))

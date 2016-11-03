@@ -26,6 +26,7 @@ class ConstChinese {
     public static final String ErrorCircleInsert = "列表不能插入到自身";
     public static final String ErrorNameAlreadyExport = "符号已被导出了 %s";
     public static final String ErrorArgsAmount = "输入参数数目不合 %s 在 %s";
+    public static final String ErrorType = "类型错误";
 
     public static final String ImportNameSeparator = "";
 

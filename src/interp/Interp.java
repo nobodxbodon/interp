@@ -228,7 +228,11 @@ class LibInterp {
 
         } else if (s.equals(")") || s.equals("]")) {
 
-            return parent;
+            if (parent != null) {
+                return parent;
+            } else {
+                throw new InterpSystemError(ErrorSyntaxTooLittle);
+            }
 
         } else if (s.matches("^[+-]?\\d+(\\.\\d+([Ee]{1}[+-]?\\d+)?)?$")) {
 
@@ -584,6 +588,8 @@ class LibInterp {
             case ExprType:
 
                 Node opNode = eval(node.getSubNode(0), env);
+
+                if (!opNode.getType().equals(LambdaType)) throw new InterpSystemError(ErrorType);
 
                 String op = opNode.getValueString();
 

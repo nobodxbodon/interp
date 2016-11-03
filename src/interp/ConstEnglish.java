@@ -25,6 +25,7 @@ class ConstEnglish {
     public static final String ErrorCircleInsert = "Can not insert into one's itself";
     public static final String ErrorNameAlreadyExport = "Already export, '%s'";
     public static final String ErrorArgsAmount = "Arguments amount error, '%s' @ %s";
+    public static final String ErrorType = "Incorrect type";
 
     public static final String ImportNameSeparator = "-";
 
