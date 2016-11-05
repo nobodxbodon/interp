@@ -25,6 +25,15 @@
 (export inc (define inc (lambda [n] (add n 1))))
 (export dec (define dec (lambda [n] (sub n 1))))
 
+(export rep (define rep (lambda [o i] (cond
+    [(eq i 0) []]
+    [#true (cons o (#lambda o (dec i)))]
+))))
+
+(export exp  (lambda [x e] (apply * (rep x e))))
+(export exp2 (lambda [x] (* x x)))
+(export exp3 (lambda [x] (* x x x)))
+
 (export default (lambda [value default-value] (if (eq value #none) default-value value)))
 
 (export true  (lambda [] #true))
@@ -42,6 +51,11 @@
     [(eq chain-fn []) o]
     [#true (#lambda ((car chain-fn) o) (cdr chain-fn))]
 )) (car #args) (cdr #args)))))
+
+(export each (lambda [Fn L] (cond
+    [(eq L []) #none]
+    [#true (progn (Fn (car L)) (#lambda Fn (cdr L)))]
+)))
 
 (export map (define map (lambda [Fn L] (cond
     [(eq L []) []]
@@ -103,6 +117,11 @@
     [#true (#lambda (cdr L) C)]
 )) L []))))
 
+(export enum (lambda [L] ((lambda [i L] (cond
+    [(eq L []) []]
+    [#true (cons [i (car L)] (#lambda (inc i) (cdr L)))]
+)) 1 L)))
+
 (export slice (define slice (lambda [L start end] (cond
     [(> start end) []]
     [#true (cons (get L start) (#lambda L (inc start) end))]
@@ -160,3 +179,35 @@
 )))
 
 (export qsort (define qsort (lambda [L] (quick-sort L const))))
+
+(export dict-get (lambda [L name] ((lambda [i] (cond
+    [(> i (length L)) &NOT-FOUND]
+    [(eq (car (get L i)) name) (get (get L i) 2)]
+    [#true (#lambda (inc i))]
+)) 1)))
+
+(export dict-set (lambda [L name value] ((lambda [i] (cond
+    [(> i (length L)) &NOT-FOUND]
+    [(eq (car (get L i)) name) (set (get L i) 2 value)]
+    [#true (#lambda (inc i))]
+)) 1)))
+
+(export dict-insert (lambda [L name value] 
+    (insert L (inc (length L)) [name value])
+))
+
+(export dict-delete (lambda [L name] ((lambda [i] (cond
+    [(> i (length L)) &NOT-FOUND]
+    [(eq (car (get L i)) name) (delete L i)]
+    [#true (#lambda (inc i))]
+)) 1)))
+
+(export dict-names (lambda [L] ((lambda [i] (cond
+    [(> i (length L)) []]
+    [#true (cons (car (get L i)) (#lambda (inc i)))]
+)) 1)))
+
+(export dict-values (lambda [L] ((lambda [i] (cond
+    [(> i (length L)) []]
+    [#true (cons (cadr (get L i)) (#lambda (inc i)))]
+)) 1)))

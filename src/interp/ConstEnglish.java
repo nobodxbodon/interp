@@ -43,6 +43,7 @@ class ConstEnglish {
     public static final String LambdaType = ":lambda";
 
     public static final String Main = "main";
+    public static final String MainArgs = "args";
 
     public static final String ValueOfLambdaType = "__lambda__";
     public static final String ValueOfListType = "[]";

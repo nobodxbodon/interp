@@ -44,6 +44,7 @@ class ConstChinese {
     public static final String LambdaType = ":算法";
 
     public static final String Main = "入口";
+    public static final String MainArgs = "入口参数";
 
     public static final String ValueOfLambdaType = "组合算法";
     public static final String ValueOfListType = "[]";

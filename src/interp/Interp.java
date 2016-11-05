@@ -16,77 +16,75 @@ public class Interp {
 
     public static void main(String[] args) {
 
-        switch (args.length) {
+        if (args.length == 0) {
 
-            case 0:
+            Scanner inScanner = new Scanner(System.in);
+            String in;
+            Node out;
 
-                Scanner inScanner = new Scanner(System.in);
-                String in;
-                Node out;
+            Env env = new Env();
+            env.define(NameOfPreviousValue, Node.createNoneNode());
 
-                Env env = new Env();
-                env.define(NameOfPreviousValue, Node.createNoneNode());
+            while (true) {
 
-                while (true) {
+                System.out.printf("[%s]<<< ", ConsolePrompt);
 
-                    System.out.printf("[%s]<<< ", ConsolePrompt);
+                in = inScanner.nextLine();
 
-                    in = inScanner.nextLine();
-
-                    if (in.isEmpty()) continue;
-
-                    try {
-
-                        out = LibInterp.aio(in, env);
-
-                        env.update(NameOfPreviousValue, out);
-
-                        System.out.printf("[%s]>>> ", ConsolePrompt);
-                        System.out.println(out);
-
-                    } catch (InterpSystemError e) {
-
-                        System.out.println(e.getMessage());
-
-                    } catch (InterpSystemExit interpSystemExit) {
-
-                        System.exit(0);
-
-                    } finally {
-
-                        System.out.println();
-                    }
-                }
-
-            case 1:
-
-                String filePath = args[0];
-
-                Node retval = Node.createNoneNode();
+                if (in.isEmpty()) continue;
 
                 try {
 
-                    retval = LibInterp.aio(LibInterp.runMain(filePath), new Env());
+                    out = LibInterp.aio(in, env);
+
+                    env.update(NameOfPreviousValue, out);
+
+                    System.out.printf("[%s]>>> ", ConsolePrompt);
+                    System.out.println(out);
 
                 } catch (InterpSystemError e) {
 
                     System.out.println(e.getMessage());
-                    e.printStackTrace();
 
                 } catch (InterpSystemExit interpSystemExit) {
 
                     System.exit(0);
+
+                } finally {
+
+                    System.out.println();
                 }
+            }
 
-                System.out.printf("\n%s %s", SystemFinishedPrompt, retval);
+        } else if (args.length > 0) {
 
-                break;
 
-            default:
+            String filePath = args[0];
 
-                System.out.println(Help);
+            Node retval = Node.createNoneNode();
+
+            try {
+
+                retval = LibInterp.runMain(filePath, args);
+
+            } catch (InterpSystemError e) {
+
+                System.out.println(e.getMessage());
+                e.printStackTrace();
+
+            } catch (InterpSystemExit interpSystemExit) {
+
+                System.exit(0);
+            }
+
+            System.out.printf("\n%s %s", SystemFinishedPrompt, retval);
+
+        } else {
+
+            System.out.println(Help);
         }
     }
+
 }
 
 class LibInterp {
@@ -104,9 +102,18 @@ class LibInterp {
         return eval(parse(lex(clean(code))), env);
     }
 
-    public static String runMain(String filePath) {
+    public static Node runMain(String filePath, String[] args) throws InterpSystemExit, InterpSystemError {
 
-        return String.format("(%s (%s \"%s\") (%s))", Progn, Import, filePath, Main);
+        List<Node> Args = new ArrayList<>(args.length - 1);
+
+        for (int i = 1; i < args.length; i++) {
+            Args.add(Node.createStringNode(args[i]));
+        }
+
+        Env env = new Env();
+        env.define(MainArgs, Node.createListNode(Args));
+
+        return aio(String.format("(%s (%s \"%s\") (%s %s))", Progn, Import, filePath, Main, MainArgs), env);
     }
 
     public static String progn(String s) {
@@ -1198,10 +1205,10 @@ class Node {
         this.subNodes = new LinkedList<>();
     }
 
-    public static Node createListNode(List<Node> kids) {
+    public static Node createListNode(List<Node> subNodes) {
 
         Node node = new Node(ListType, ValueOfListType);
-        node.subNodes = kids;
+        node.subNodes = subNodes;
 
         return node;
     }
