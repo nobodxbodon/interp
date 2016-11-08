@@ -2,11 +2,6 @@ package interp;
 
 class ConstChinese {
 
-    public static final String Help = "interp 0.1.0\n\n" +
-
-            "interp        -> 进入交互模式\n" +
-            "interp 文件名 -> 对文件求值";
-
     public static final String NameOfPreviousValue = "*前者*";
 
     public static final String ConsolePrompt = "解释器";
@@ -14,8 +9,6 @@ class ConstChinese {
     public static final String SystemFinishedPrompt = "系统中止并输出";
 
     public static final String ErrorPrefix = "*** 系统错误: %s";
-    public static final String AssertPrefix = "*** 命中: %s";
-    public static final String ErrorNotImplemented = "功能未实现";
     public static final String ErrorNotFoundSymbol = "未找到符号 %s";
     public static final String ErrorNotFoundFile = "未找到文件 %s";
     public static final String ErrorNotMatch = "模式不匹配";
@@ -27,6 +20,7 @@ class ConstChinese {
     public static final String ErrorNameAlreadyExport = "符号已被导出了 %s";
     public static final String ErrorArgsAmount = "输入参数数目不合 %s 在 %s";
     public static final String ErrorType = "类型错误";
+    public static final String ErrorExternalSymbol = "禁止更改外部符号 %s";
 
     public static final String ImportNameSeparator = "";
 
@@ -65,6 +59,7 @@ class ConstChinese {
 
     public static final String Cond = "选择";
     public static final String Eq = "等于";
+    public static final String EqOp = "=";
     public static final String Lambda = "算法";
     public static final String Progn = "顺序";
     public static final String If = "如若";
@@ -76,13 +71,12 @@ class ConstChinese {
     public static final String Export = "导出";
     public static final String Eval = "求值";
     public static final String Type = "类型";
+    public static final String Length = "长度";
+    public static final String Assert = "断言";
     public static final String Exit = "退出";
 
     public static final String Input = "输入";
     public static final String Output = "输出";
-
-    public static final String Assert = "断言";
-    public static final String Trap = "自陷";
 
     public static final String Get = "取";
     public static final String Set = "改";
@@ -92,9 +86,6 @@ class ConstChinese {
 
     public static final String Substr = "片段";
     public static final String Concat = "拼接";
-
-    public static final String Length = "长度";
-
     public static final String Encode = "编码";
     public static final String Decode = "解码";
 

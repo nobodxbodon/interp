@@ -47,10 +47,10 @@
 
 (export $ (define $ (lambda [fn] (lambda [] ((kar #args) (apply fn (kdr #args)))))))
 
-(export ~ (define ~ (lambda [] ((lambda [o chain-fn] (cond
+(export ~ (lambda [o chain-fn] (cond
     [(eq chain-fn []) o]
     [#true (#lambda ((car chain-fn) o) (cdr chain-fn))]
-)) (car #args) (cdr #args)))))
+)))
 
 (export each (lambda [Fn L] (cond
     [(eq L []) #none]
@@ -80,6 +80,25 @@
     [(eq (Fn (car L)) #true) (cons (car L) (#lambda Fn (cdr L)))]
     [#true (#lambda Fn (cdr L))]
 ))))
+
+(export validate (lambda [L Format] (progn
+    (define atomic [:number :string :bool :none :exception :blob :handle])
+
+    ((lambda [L Format] (cond
+        [(in (type Format) atomic) (eq Format L)]
+        [(type-eq Format :type) (eq (type L) Format)]
+        [(type-eq Format :lambda) (Format L)]
+        [(eq (type L) (type Format) :list) (cond
+            [(eq (length L) (length Format) 0) #true]
+            [(eq (length L) (length Format)) (and
+                (#lambda (car L) (car Format))
+                (#lambda (cdr L) (cdr Format))
+            )]
+            [#true #false]
+        )]
+        [#true #false]
+    )) L Format)
+)))
 
 (export in (define in (lambda [o L] (cond
     [(eq L []) #false]
@@ -127,7 +146,7 @@
     [#true (cons (get L start) (#lambda L (inc start) end))]
 ))))
 
-(export exclude (define exclude (lambda [e L]
+(export exclude (define exclude (lambda [L e]
     ((lambda [L] (cond
         [(eq L []) []]
         [(eq (car L) e) (#lambda (cdr L))]
@@ -156,9 +175,9 @@
     [#true (cons s (#lambda (+ s i) e i))]
 )) (get #args 1) (get #args 2) (if (length-eq #args 3) (get #args 3) 1)))))
 
-(export take (define take (lambda [n fn] ((lambda [i] (cond
+(export take (define take (lambda [n Fn] ((lambda [i] (cond
     [(> i n) []]
-    [#true (cons (fn) (#lambda (inc i)))]
+    [#true (let [[_ (Fn)]] (if (eq _ &END) [] (cons _ (#lambda (inc i)))))]
 )) 1))))
 
 (export all (define all (lambda [L] (apply and L))))
@@ -169,14 +188,14 @@
 
 (export println (define println (lambda [] (progn (apply output #args) (output "%n")))))
 
-(define quick-sort (lambda [L Fn] (cond
+(export quick-sort (define quick-sort (lambda [L Fn] (cond
     [(<= (length L) 1) L]
     [#true (merge
         (#lambda (filter (lambda [i] (< (Fn i) (Fn (car L)))) (cdr L)) Fn)
         [(car L)]
         (#lambda (filter (lambda [i] (>= (Fn i) (Fn (car L)))) (cdr L)) Fn)
     )]
-)))
+))))
 
 (export qsort (define qsort (lambda [L] (quick-sort L const))))
 
@@ -211,3 +230,18 @@
     [(> i (length L)) []]
     [#true (cons (cadr (get L i)) (#lambda (inc i)))]
 )) 1)))
+
+;; TODO: 将来再写。
+; (export string-start-with (lambda [s prefix] (cond
+    ; [(> (length prefix) (length s)) #false]
+    ; [(= (length prefix) (length s)) (eq s prefix)]
+    ; [(< (length prefix) (length s)) (eq (substr s 1 (length prefix)) prefix)]
+; )))
+
+; (export string-end-with (lambda [s suffix] ()))
+; (export string-insert (lambda [] ()))
+; (export string-cutout (lambda [] ()))
+; (export string-split-by (lambda [] ()))
+; (export string-join-with (lambda [] ()))
+; (export string-capitalize (lambda [] ()))
+; (export string-search (lambda [] ()))

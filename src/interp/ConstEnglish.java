@@ -2,11 +2,6 @@ package interp;
 
 class ConstEnglish {
 
-    public static final String Help = "interp 0.1.0\n\n" +
-
-            "interp             -> into interactive mode\n" +
-            "interp a-file-name -> evaluate file";
-
     public static final String NameOfPreviousValue = "_";
 
     public static final String ConsolePrompt = "REPL";
@@ -14,18 +9,18 @@ class ConstEnglish {
     public static final String SystemFinishedPrompt = "System finished with";
 
     public static final String ErrorPrefix = "*** System Error: %s";
-    public static final String ErrorNotImplemented = "Not implemented yet";
     public static final String ErrorNotFoundSymbol = "Not found symbol '%s'";
-    public static final String ErrorNotFoundFile = "Not found file %s";
+    public static final String ErrorNotFoundFile = "Not found file '%s'";
     public static final String ErrorNotMatch = "Match not match";
     public static final String ErrorSyntaxTooLittle = "Too little input";
     public static final String ErrorSyntaxTooMuch = "Too many input";
-    public static final String ErrorSyntaxUndefined = "Undefined literal %s";
+    public static final String ErrorSyntaxUndefined = "Undefined literal '%s'";
     public static final String ErrorSyntaxIncorrectEscape = "Incorrect escape";
     public static final String ErrorCircleInsert = "Can not insert into one's itself";
     public static final String ErrorNameAlreadyExport = "Already export, '%s'";
     public static final String ErrorArgsAmount = "Arguments amount error, '%s' @ %s";
     public static final String ErrorType = "Incorrect type";
+    public static final String ErrorExternalSymbol = "Forbidden to update external name '%s'";
 
     public static final String ImportNameSeparator = "-";
 
@@ -64,6 +59,7 @@ class ConstEnglish {
 
     public static final String Cond = "cond";
     public static final String Eq = "eq";
+    public static final String EqOp = "=";
     public static final String Lambda = "lambda";
     public static final String Progn = "progn";
     public static final String If = "if";
@@ -75,24 +71,21 @@ class ConstEnglish {
     public static final String Export = "export";
     public static final String Eval = "eval";
     public static final String Type = "type";
+    public static final String Length = "length";
+    public static final String Assert = "assert";
     public static final String Exit = "exit";
 
     public static final String Input = "input";
     public static final String Output = "output";
 
-    public static final String Assert = "assert";
-    public static final String Trap = "trap";
-
     public static final String Get = "get";
     public static final String Set = "set";
     public static final String Insert = "insert";
     public static final String Delete = "delete";
-    //    public static final String Length = "length";
     public static final String Copy = "copy";
 
     public static final String Substr = "substr";
     public static final String Concat = "concat";
-    public static final String Length = "length";
     public static final String Encode = "encode";
     public static final String Decode = "decode";
 

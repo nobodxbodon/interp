@@ -56,7 +56,7 @@ public class Interp {
                 }
             }
 
-        } else if (args.length > 0) {
+        } else {
 
 
             String filePath = args[0];
@@ -79,12 +79,8 @@ public class Interp {
 
             System.out.printf("\n%s %s", SystemFinishedPrompt, retval);
 
-        } else {
-
-            System.out.println(Help);
         }
     }
-
 }
 
 class LibInterp {
@@ -205,6 +201,9 @@ class LibInterp {
                 } else if (s.charAt(i + 1) == 'n') {
                     builder.append('\n');
                     i += 2;
+                } else if (s.charAt(i + 1) == 'q') {
+                    builder.append('"');
+                    i += 2;
                 } else {
                     throw new InterpSystemError(ErrorSyntaxIncorrectEscape);
                 }
@@ -266,39 +265,46 @@ class LibInterp {
             switch (s) {
 
                 case ValueOfBoolTypeTrue:
-
                     node = new Node(BoolType, s);
                     break;
-
                 case ValueOfBoolTypeFalse:
-
                     node = new Node(BoolType, s);
                     break;
-
                 case ValueOfNoneType:
-
                     node = new Node(NoneType, s);
                     break;
-
                 case BoundArgs:
-
                     node = new Node(SymbolType, s);
                     break;
-
                 case BoundLambda:
-
                     node = new Node(SymbolType, s);
                     break;
 
                 default:
-
                     throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
-
         } else if (s.startsWith(":")) {
 
-            node = new Node(TypeType, s);
+            switch (s) {
 
+                case ExprType:
+                case ListType:
+                case NumberType:
+                case StringType:
+                case BlobType:
+                case ExceptionType:
+                case HandleType:
+                case NoneType:
+                case SymbolType:
+                case TypeType:
+                case BoolType:
+                case LambdaType:
+                    node = new Node(TypeType, s);
+                    break;
+
+                default:
+                    throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
+            }
         } else {
 
             node = new Node(SymbolType, s);
@@ -313,7 +319,7 @@ class LibInterp {
 
         } else {
 
-            parent.append(node);
+            parent.addSubNode(node);
             return __parse(parent, L);
         }
     }
@@ -455,6 +461,7 @@ class LibInterp {
 
             case Cond:
                 return amount >= 1;
+            case EqOp:
             case Eq:
                 return amount >= 2;
             case Lambda:
@@ -488,8 +495,6 @@ class LibInterp {
                 return amount >= 1;
 
             case Assert:
-                return amount == 1;
-            case Trap:
                 return amount == 1;
 
             case Get:
@@ -663,6 +668,7 @@ class LibInterp {
                             }
                             break;
 
+                        case EqOp:
                         case Eq:
 
                             retval = Node.createBoolNode(__eq(0, 1, L, env));
@@ -785,7 +791,7 @@ class LibInterp {
 
                         case Input:
                             Scanner inScanner = new Scanner(System.in);
-                            retval = aio(inScanner.nextLine(), env);
+                            retval = Node.createStringNode(inScanner.nextLine());
                             break;
 
                         case Output:
@@ -822,10 +828,6 @@ class LibInterp {
                                 retval = Node.createNoneNode();
                             }
                             break;
-
-                        case Trap:
-
-                            throw new InterpSystemError(ErrorNotImplemented);
 
                         default:
 
@@ -1264,7 +1266,7 @@ class Node {
 
         } else if (this.type.equals(NumberType)) {
 
-            return ((BigDecimal) this.value).compareTo((BigDecimal) another.value) == 0;
+            return compareValueNumberTo(another) == 0;
 
         } else if (this.type.equals(LambdaType)) {
 
@@ -1292,7 +1294,7 @@ class Node {
         }
     }
 
-    public Node append(Node node) {
+    public Node addSubNode(Node node) {
 
         this.subNodes.add(node);
 
@@ -1381,7 +1383,7 @@ class Node {
 
             case StringType:
 
-                this.expr = String.format("\"%s\"", ((String) this.value).replace("%", "%%").replace("\n", "%n"));
+                this.expr = String.format("\"%s\"", ((String) this.value).replace("%", "%%").replace("\n", "%n").replace("\"", "%q"));
                 break;
 
             case BlobType:
@@ -1428,11 +1430,11 @@ class Env {
 
                 Define, Update, Import, Export,
 
-                Cond, Eq, Lambda, Progn, If, Apply, Quote, Let, Match, Eval, Type, Exit,
+                Cond, Eq, EqOp, Lambda, Progn, If, Apply, Quote, Let, Match, Eval, Type, Exit,
 
                 Input, Output,
 
-                Assert, Trap,
+                Assert,
 
                 Length,
 
@@ -1451,26 +1453,26 @@ class Env {
         }
 
         ENV.parent = null;
+        ENV.external = true;
     }
 
     private Env parent;
     private Map<String, Node> define;
     private Map<String, Node> export;
+    private boolean external;
 
     public Env() {
 
         this.parent = ENV;
         this.define = new HashMap<>();
-        this.export = new HashMap<>();
     }
 
     public Env grow() {
 
-        Env aEnv = new Env();
+        Env env = new Env();
+        env.parent = this;
 
-        aEnv.parent = this;
-
-        return aEnv;
+        return env;
     }
 
     public Node lookup(String name) throws InterpSystemError {
@@ -1503,7 +1505,8 @@ class Env {
 
         if (this.define.containsKey(name)) {
 
-            this.define.replace(name, value);
+            if (this.external) throw new InterpSystemError(String.format(ErrorExternalSymbol, name));
+            else this.define.replace(name, value);
 
         } else {
 
@@ -1518,24 +1521,29 @@ class Env {
         }
     }
 
-    public void _import(Env env, String prefix) {
+    public void _import(Env importedEnv, String prefix) {
 
-        Env importEnv = new Env();
+        if (importedEnv.export == null) return;
 
-        importEnv.parent = this.parent;
+        Env env = new Env();
 
-        for (Map.Entry<String, Node> item : env.export.entrySet()) {
+        env.parent = this.parent;
+        env.external = true;
 
-            importEnv.define(prefix.isEmpty() ?
+        for (Map.Entry<String, Node> item : importedEnv.export.entrySet()) {
+
+            env.define(prefix.isEmpty() ?
                             item.getKey() :
                             prefix + ImportNameSeparator + item.getKey(),
                     item.getValue());
         }
 
-        this.parent = importEnv;
+        this.parent = env;
     }
 
     public void export(String name, Node value) throws InterpSystemError {
+
+        if (this.export == null) this.export = new HashMap<>();
 
         if (this.export.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExport, name));
 
