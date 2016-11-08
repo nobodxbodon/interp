@@ -217,57 +217,65 @@ class LibInterp {
         return builder.toString();
     }
 
-    private static Node __parse(Node parent, List<String> L) throws InterpSystemError {
+    private static class ParseRollback extends Exception {}
+
+    private static Node __parse(List<String> L) throws InterpSystemError, ParseRollback {
 
         if (L.isEmpty()) throw new InterpSystemError(ErrorSyntaxTooLittle);
 
         String s = L.remove(0);
         Node node;
 
-        if (s.equals("(")) {
+        switch (s) {
+            case "(":
+                node = new Node(ExprType, ValueOfExprType);
+                try {while (true) node.addSubNode(__parse(L));}
+                catch (ParseRollback e) { return node; }
 
-            node = __parse(new Node(ExprType, ValueOfExprType), L);
+            case "[":
+                node = new Node(ListType, ValueOfListType);
+                try {while (true) node.addSubNode(__parse(L));}
+                catch (ParseRollback e) { return node; }
 
-        } else if (s.equals("[")) {
+            case ")":
+            case "]": throw new ParseRollback();
 
-            node = __parse(new Node(ListType, ValueOfListType), L);
+            default:
+                return __identify(s);
+        }
+    }
 
-        } else if (s.equals(")") || s.equals("]")) {
+    private static Node __identify(String s) throws InterpSystemError {
 
-            if (parent != null) {
-                return parent;
-            } else {
-                throw new InterpSystemError(ErrorSyntaxTooLittle);
-            }
+        if (s.matches("^[+-]?\\d+(\\.\\d+([Ee][+-]?\\d+)?)?$")) {
 
-        } else if (s.matches("^[+-]?\\d+(\\.\\d+([Ee]{1}[+-]?\\d+)?)?$")) {
-
-            node = new Node(NumberType, new BigDecimal(s));
+            return new Node(NumberType, new BigDecimal(s));
 
         } else if (s.startsWith("\"") && s.endsWith("\"")) {
 
-            node = new Node(StringType, __escape(s.substring(1, s.length() - 1)));
+            return new Node(StringType, __escape(s.substring(1, s.length() - 1)));
 
         } else if (s.startsWith("'") && s.endsWith("'")) {
 
-            node = new Node(BlobType, s.substring(1, s.length() - 1));
+            return new Node(BlobType, s.substring(1, s.length() - 1));
 
         } else if (s.startsWith("&")) {
 
-            node = new Node(ExceptionType, s);
+            return new Node(ExceptionType, s);
 
         } else if (s.startsWith("@")) {
 
-            node = new Node(HandleType, s);
+            return new Node(HandleType, s);
 
         } else if (s.startsWith("#")) {
 
             switch (s) {
-                case ValueOfBoolTypeTrue:   node = new Node(BoolType, s); break;
-                case ValueOfBoolTypeFalse:  node = new Node(BoolType, s); break;
-                case ValueOfNoneType:       node = new Node(NoneType, s); break;
-                case BoundArgs:             node = new Node(SymbolType, s); break;
-                case BoundLambda:           node = new Node(SymbolType, s); break;
+
+                case ValueOfBoolTypeTrue:   return new Node(BoolType, s);
+                case ValueOfBoolTypeFalse:  return new Node(BoolType, s);
+                case ValueOfNoneType:       return new Node(NoneType, s);
+                case BoundArgs:             return new Node(SymbolType, s);
+                case BoundLambda:           return new Node(SymbolType, s);
 
                 default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
@@ -286,31 +294,29 @@ class LibInterp {
                 case SymbolType:
                 case TypeType:
                 case BoolType:
-                case LambdaType: node = new Node(TypeType, s); break;
+                case LambdaType: return new Node(TypeType, s);
 
                 default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
         } else {
 
-            node = new Node(SymbolType, s);
+            return new Node(SymbolType, s);
         }
 
-        if (parent == null) {
-
-            if (!L.isEmpty()) throw new InterpSystemError(ErrorSyntaxTooMuch);
-
-            return node;
-
-        } else {
-
-            parent.addSubNode(node);
-            return __parse(parent, L);
-        }
     }
 
     public static Node parse(List<String> fragments) throws InterpSystemError {
 
-        return __parse(null, fragments);
+        Node node;
+
+        try {
+            node = __parse(fragments);
+        } catch (ParseRollback e) {
+            throw new InterpSystemError(ErrorSyntaxTooLittle);
+        }
+
+        if (!fragments.isEmpty()) { throw new InterpSystemError(ErrorSyntaxTooMuch); }
+        else { return node; }
     }
 
     private static boolean __eq(int i, int j, List<Node> L, Env env) throws InterpSystemExit, InterpSystemError {
@@ -325,45 +331,6 @@ class LibInterp {
             Node node_j = L.get(j);
 
             return eval(node_i, env).eq(eval(node_j, env)) && __eq(j, j + 1, L, env);
-        }
-    }
-
-    private static String __quote(Node node) {
-
-        switch (node.getType()) {
-
-            case StringType:
-
-                String s = node.getValueString();
-                List<Node> _L = new ArrayList<>();
-
-                for (char c : s.toCharArray()) {
-
-                    _L.add(Node.createNumberNode(BigDecimal.valueOf(c)));
-                }
-
-                return String.format(QuoteToStringFormat, Node.createListNode(_L));
-
-            case LambdaType:
-
-                if (node.getValueString().equals(ValueOfLambdaType)) {
-                    return String.format(LambdaToStringFormat, node.getSubNode(0).toString(), __quote(node.getSubNode(1)));
-                } else {
-
-                    return node.getValueString();
-                }
-
-            case ExprType:
-
-                return String.format("(%s)", String.join(" ", node.getSubNodes().stream().map(LibInterp::__quote).collect(Collectors.toList())));
-
-            case ListType:
-
-                return String.format("[%s]", String.join(" ", node.getSubNodes().stream().map(LibInterp::__quote).collect(Collectors.toList())));
-
-            default:
-
-                return node.toString();
         }
     }
 
@@ -438,111 +405,65 @@ class LibInterp {
     private static boolean __check_args_amount(String op, int amount) {
 
         switch (op) {
-            case Define:
-                return amount == 2;
-            case Update:
-                return amount == 2;
+            case Define: return amount == 2;
+            case Update: return amount == 2;
 
-            case Cond:
-                return amount >= 1;
+            case Cond:   return amount >= 1;
             case EqOp:
-            case Eq:
-                return amount >= 2;
-            case Lambda:
-                return amount == 2;
-            case Progn:
-                return amount >= 1;
-            case If:
-                return amount == 2 || amount == 3;
-            case Apply:
-                return amount == 2;
-            case Quote:
-                return amount == 1;
-            case Let:
-                return amount == 2;
-            case Match:
-                return amount == 3;
-            case Import:
-                return amount == 1 || amount == 2;
-            case Export:
-                return amount == 2;
-            case Eval:
-                return amount == 1;
-            case Type:
-                return amount == 1;
-            case Exit:
-                return amount == 0;
+            case Eq:     return amount >= 2;
+            case Lambda: return amount == 2;
+            case Progn:  return amount >= 1;
+            case If:     return amount == 2 || amount == 3;
+            case Apply:  return amount == 2;
+            case Quote:  return amount == 1;
+            case Let:    return amount == 2;
+            case Match:  return amount == 3;
+            case Import: return amount == 1 || amount == 2;
+            case Export: return amount == 2;
+            case Eval:   return amount == 1;
+            case Type:   return amount == 1;
+            case Exit:   return amount == 0;
+            case Input:  return amount == 0;
+            case Output: return amount >= 1;
+            case Assert: return amount == 1;
 
-            case Input:
-                return amount == 0;
-            case Output:
-                return amount >= 1;
+            case Get:    return amount == 2;
+            case Set:    return amount == 3;
+            case Insert: return amount == 3;
+            case Delete: return amount == 2;
+            case Copy:   return amount == 1;
 
-            case Assert:
-                return amount == 1;
+            case Substr: return amount == 3;
+            case Concat: return amount >= 2;
+            case Length: return amount == 1;
+            case Encode: return amount == 1;
+            case Decode: return amount == 1;
 
-            case Get:
-                return amount == 2;
-            case Set:
-                return amount == 3;
-            case Insert:
-                return amount == 3;
-            case Delete:
-                return amount == 2;
-            case Copy:
-                return amount == 1;
-
-            case Substr:
-                return amount == 3;
-            case Concat:
-                return amount >= 2;
-
-            case Length:
-                return amount == 1;
-
-            case Encode:
-                return amount == 1;
-            case Decode:
-                return amount == 1;
-
-            case And:
-                return amount >= 2;
-            case Or:
-                return amount >= 2;
-            case Not:
-                return amount == 1;
+            case And:    return amount >= 2;
+            case Or:     return amount >= 2;
+            case Not:    return amount == 1;
 
             case Add:
-            case AddOp:
-                return amount >= 2;
+            case AddOp:  return amount >= 2;
             case Sub:
-            case SubOp:
-                return amount >= 2;
+            case SubOp:  return amount >= 2;
             case Mul:
-            case MulOp:
-                return amount >= 2;
+            case MulOp:  return amount >= 2;
             case Div:
-            case DivOp:
-                return amount >= 2;
+            case DivOp:  return amount >= 2;
             case Mod:
-            case ModOp:
-                return amount >= 2;
+            case ModOp:  return amount >= 2;
 
             case Gt:
-            case GtOp:
-                return amount >= 2;
+            case GtOp:   return amount >= 2;
             case Ge:
-            case GeOp:
-                return amount >= 2;
+            case GeOp:   return amount >= 2;
             case Lt:
-            case LtOp:
-                return amount >= 2;
+            case LtOp:   return amount >= 2;
             case Le:
-            case LeOp:
-                return amount >= 2;
+            case LeOp:   return amount >= 2;
 
-            default:
-                return true;
+            default:     return true;
         }
     }
 
@@ -692,7 +613,7 @@ class LibInterp {
 
                         case Quote:
 
-                            retval = Node.createStringNode(__quote(eval(L.get(0), env)));
+                            retval = Node.createStringNode(eval(L.get(0), env).toString());
                             break;
 
                         case Let:
