@@ -263,25 +263,13 @@ class LibInterp {
         } else if (s.startsWith("#")) {
 
             switch (s) {
+                case ValueOfBoolTypeTrue:   node = new Node(BoolType, s); break;
+                case ValueOfBoolTypeFalse:  node = new Node(BoolType, s); break;
+                case ValueOfNoneType:       node = new Node(NoneType, s); break;
+                case BoundArgs:             node = new Node(SymbolType, s); break;
+                case BoundLambda:           node = new Node(SymbolType, s); break;
 
-                case ValueOfBoolTypeTrue:
-                    node = new Node(BoolType, s);
-                    break;
-                case ValueOfBoolTypeFalse:
-                    node = new Node(BoolType, s);
-                    break;
-                case ValueOfNoneType:
-                    node = new Node(NoneType, s);
-                    break;
-                case BoundArgs:
-                    node = new Node(SymbolType, s);
-                    break;
-                case BoundLambda:
-                    node = new Node(SymbolType, s);
-                    break;
-
-                default:
-                    throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
+                default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
         } else if (s.startsWith(":")) {
 
@@ -298,18 +286,14 @@ class LibInterp {
                 case SymbolType:
                 case TypeType:
                 case BoolType:
-                case LambdaType:
-                    node = new Node(TypeType, s);
-                    break;
+                case LambdaType: node = new Node(TypeType, s); break;
 
-                default:
-                    throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
+                default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
         } else {
 
             node = new Node(SymbolType, s);
         }
-
 
         if (parent == null) {
 
