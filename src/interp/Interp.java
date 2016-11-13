@@ -85,22 +85,22 @@ public class Interp {
 
 class LibInterp {
 
-    private static final Stack<Path> PathStack = new Stack<>();
-    private static final Path InterpHome;
+    private static final Stack<Path> PATH_STACK = new Stack<>();
+    private static final Path INTERP_HOME;
 
     static {
-        PathStack.push(Paths.get(".").toAbsolutePath().normalize());
-        InterpHome = Paths.get("C:\\Users\\NER0\\IdeaProjects\\interp\\lib");
+        PATH_STACK.push(Paths.get(".").toAbsolutePath().normalize());
+        INTERP_HOME = Paths.get("C:\\Users\\NER0\\IdeaProjects\\interp\\lib");
     }
 
-    public static Node aio(String code, Env env) throws InterpSystemExit, InterpSystemError {
+    public static Node aio(String code, Env env) {
 
         return eval(parse(lex(clean(code))), env);
     }
 
-    public static Node runMain(String filePath, String[] args) throws InterpSystemExit, InterpSystemError {
+    public static Node runMain(String filePath, String[] args) {
 
-        List<Node> Args = new ArrayList<>(args.length - 1);
+        List<Node> Args = new LinkedList<>();
 
         for (int i = 1; i < args.length; i++) {
             Args.add(Node.createStringNode(args[i]));
@@ -168,7 +168,7 @@ class LibInterp {
 
     public static List<String> lex(String code) {
 
-        List<String> fragments = new ArrayList<>();
+        List<String> fragments = new LinkedList<>();
 
         String pattern = "\\(|\\)|\\[|\\]|\".*?\"|'.*?'|(?<=\\(|\\)|\\[|\\]|\\s|\"|'|^)\\S+?(?=\\(|\\)|\\[|\\]|\\s|\"|'|$)";
         Matcher matcher = Pattern.compile(pattern).matcher(code);
@@ -181,7 +181,7 @@ class LibInterp {
         return fragments;
     }
 
-    private static String __escape(String s) throws InterpSystemError {
+    private static String __escape(String s) {
 
         StringBuilder builder = new StringBuilder();
         int i = 0;
@@ -217,9 +217,10 @@ class LibInterp {
         return builder.toString();
     }
 
-    private static class ParseRollback extends Exception {}
+    private static class ParseRollback extends RuntimeException {
+    }
 
-    private static Node __parse(List<String> L) throws InterpSystemError, ParseRollback {
+    private static Node __parse(List<String> L) {
 
         if (L.isEmpty()) throw new InterpSystemError(ErrorSyntaxTooLittle);
 
@@ -238,14 +239,15 @@ class LibInterp {
                 catch (ParseRollback e) { return node; }
 
             case ")":
-            case "]": throw new ParseRollback();
+            case "]":
+                throw new ParseRollback();
 
             default:
                 return __identify(s);
         }
     }
 
-    private static Node __identify(String s) throws InterpSystemError {
+    private static Node __identify(String s) {
 
         if (s.matches("^[+-]?\\d+(\\.\\d+([Ee][+-]?\\d+)?)?$")) {
 
@@ -271,13 +273,19 @@ class LibInterp {
 
             switch (s) {
 
-                case ValueOfBoolTypeTrue:   return new Node(BoolType, s);
-                case ValueOfBoolTypeFalse:  return new Node(BoolType, s);
-                case ValueOfNoneType:       return new Node(NoneType, s);
-                case BoundArgs:             return new Node(SymbolType, s);
-                case BoundLambda:           return new Node(SymbolType, s);
+                case ValueOfBoolTypeTrue:
+                    return new Node(BoolType, s);
+                case ValueOfBoolTypeFalse:
+                    return new Node(BoolType, s);
+                case ValueOfNoneType:
+                    return new Node(NoneType, s);
+                case BoundArgs:
+                    return new Node(SymbolType, s);
+                case BoundLambda:
+                    return new Node(SymbolType, s);
 
-                default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
+                default:
+                    throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
         } else if (s.startsWith(":")) {
 
@@ -294,9 +302,11 @@ class LibInterp {
                 case SymbolType:
                 case TypeType:
                 case BoolType:
-                case LambdaType: return new Node(TypeType, s);
+                case LambdaType:
+                    return new Node(TypeType, s);
 
-                default: throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
+                default:
+                    throw new InterpSystemError(String.format(ErrorSyntaxUndefined, s));
             }
         } else {
 
@@ -305,7 +315,7 @@ class LibInterp {
 
     }
 
-    public static Node parse(List<String> fragments) throws InterpSystemError {
+    public static Node parse(List<String> fragments) {
 
         Node node;
 
@@ -315,11 +325,14 @@ class LibInterp {
             throw new InterpSystemError(ErrorSyntaxTooLittle);
         }
 
-        if (!fragments.isEmpty()) { throw new InterpSystemError(ErrorSyntaxTooMuch); }
-        else { return node; }
+        if (!fragments.isEmpty()) {
+            throw new InterpSystemError(ErrorSyntaxTooMuch);
+        } else {
+            return node;
+        }
     }
 
-    private static boolean __eq(int i, int j, List<Node> L, Env env) throws InterpSystemExit, InterpSystemError {
+    private static boolean __eq(int i, int j, List<Node> L, Env env) {
 
         if (j == L.size()) {
 
@@ -364,7 +377,7 @@ class LibInterp {
 
     }
 
-    private static boolean __and(int i, int j, List<Node> L, Env env) throws InterpSystemExit, InterpSystemError {
+    private static boolean __and(int i, int j, List<Node> L, Env env) {
 
         if (j == L.size()) {
 
@@ -379,7 +392,7 @@ class LibInterp {
         }
     }
 
-    private static boolean __or(int i, int j, List<Node> L, Env env) throws InterpSystemExit, InterpSystemError {
+    private static boolean __or(int i, int j, List<Node> L, Env env) {
 
         if (j == L.size()) {
 
@@ -394,8 +407,8 @@ class LibInterp {
         }
     }
 
-    private static List<Node> __eval_all(List<Node> L, Env env) throws InterpSystemExit, InterpSystemError {
-        List<Node> _L = new ArrayList<>();
+    private static List<Node> __eval_all(List<Node> L, Env env) {
+        List<Node> _L = new LinkedList<>();
 
         for (Node n : L) _L.add(eval(n, env));
 
@@ -405,69 +418,111 @@ class LibInterp {
     private static boolean __check_args_amount(String op, int amount) {
 
         switch (op) {
-            case Define: return amount == 2;
-            case Update: return amount == 2;
+            case Define:
+                return amount == 2;
+            case Update:
+                return amount == 2;
 
-            case Cond:   return amount >= 1;
+            case Cond:
+                return amount >= 1;
             case EqOp:
-            case Eq:     return amount >= 2;
-            case Lambda: return amount == 2;
-            case Progn:  return amount >= 1;
-            case If:     return amount == 2 || amount == 3;
-            case Apply:  return amount == 2;
-            case Quote:  return amount == 1;
-            case Let:    return amount == 2;
-            case Match:  return amount == 3;
-            case Import: return amount == 1 || amount == 2;
-            case Export: return amount == 2;
-            case Eval:   return amount == 1;
-            case Type:   return amount == 1;
-            case Exit:   return amount == 0;
-            case Input:  return amount == 0;
-            case Output: return amount >= 1;
-            case Assert: return amount == 1;
+            case Eq:
+                return amount >= 2;
+            case Lambda:
+                return amount == 2;
+            case Progn:
+                return amount >= 1;
+            case If:
+                return amount == 2 || amount == 3;
+            case Apply:
+                return amount == 2;
+            case Quote:
+                return amount == 1;
+            case Let:
+                return amount == 2;
+            case Match:
+                return amount == 3;
+            case Import:
+                return amount == 1 || amount == 2;
+            case Export:
+                return amount == 2;
+            case Eval:
+                return amount == 1;
+            case Type:
+                return amount == 1;
+            case Exit:
+                return amount == 0;
+            case Input:
+                return amount == 0;
+            case Output:
+                return amount >= 1;
+            case Assert:
+                return amount == 1;
 
-            case Get:    return amount == 2;
-            case Set:    return amount == 3;
-            case Insert: return amount == 3;
-            case Delete: return amount == 2;
-            case Copy:   return amount == 1;
+            case Get:
+                return amount == 2;
+            case Set:
+                return amount == 3;
+            case Insert:
+                return amount == 3;
+            case Delete:
+                return amount == 2;
+            case Copy:
+                return amount == 1;
 
-            case Substr: return amount == 3;
-            case Concat: return amount >= 2;
-            case Length: return amount == 1;
-            case Encode: return amount == 1;
-            case Decode: return amount == 1;
+            case Substr:
+                return amount == 3;
+            case Concat:
+                return amount >= 2;
+            case Length:
+                return amount == 1;
+            case Encode:
+                return amount == 1;
+            case Decode:
+                return amount == 1;
 
-            case And:    return amount >= 2;
-            case Or:     return amount >= 2;
-            case Not:    return amount == 1;
+            case And:
+                return amount >= 2;
+            case Or:
+                return amount >= 2;
+            case Not:
+                return amount == 1;
 
             case Add:
-            case AddOp:  return amount >= 2;
+            case AddOp:
+                return amount >= 2;
             case Sub:
-            case SubOp:  return amount >= 2;
+            case SubOp:
+                return amount >= 2;
             case Mul:
-            case MulOp:  return amount >= 2;
+            case MulOp:
+                return amount >= 2;
             case Div:
-            case DivOp:  return amount >= 2;
+            case DivOp:
+                return amount >= 2;
             case Mod:
-            case ModOp:  return amount >= 2;
+            case ModOp:
+                return amount >= 2;
 
             case Gt:
-            case GtOp:   return amount >= 2;
+            case GtOp:
+                return amount >= 2;
             case Ge:
-            case GeOp:   return amount >= 2;
+            case GeOp:
+                return amount >= 2;
             case Lt:
-            case LtOp:   return amount >= 2;
+            case LtOp:
+                return amount >= 2;
             case Le:
-            case LeOp:   return amount >= 2;
+            case LeOp:
+                return amount >= 2;
 
-            default:     return true;
+            default:
+                return true;
         }
     }
 
-    public static Node eval(Node node, Env env) throws InterpSystemExit, InterpSystemError {
+    public static Node eval(Node node, Env env) {
 
         Node retval = Node.createNoneNode();
         String type = node.getType();
@@ -493,10 +548,10 @@ class LibInterp {
 
             case ListType:
 
-                ArrayList<Node> list = new ArrayList<>();
+                List<Node> list = new LinkedList<>();
 
-                for (Node kid : node.getSubNodes()) {
-                    list.add(eval(kid, env));
+                for (Node subNode : node.getSubNodes()) {
+                    list.add(eval(subNode, env));
                 }
 
                 retval = Node.createListNode(list);
@@ -603,7 +658,7 @@ class LibInterp {
 
                         case Apply:
 
-                            List<Node> arrayList = new ArrayList<>();
+                            List<Node> arrayList = new LinkedList<>();
 
                             arrayList.add(eval(L.get(0), env));
                             arrayList.addAll(eval(L.get(1), env).getSubNodes());
@@ -643,15 +698,15 @@ class LibInterp {
                             String prefix = L.size() == 2 ? L.get(1).getValueString() : "";
                             Path a;
 
-                            if (path.startsWith("/") || path.startsWith("\\")){
-                                a = InterpHome.resolve(path.substring(1)).normalize();
-                            }else {
-                                a = PathStack.peek().resolve(path).normalize();
+                            if (path.startsWith("/") || path.startsWith("\\")) {
+                                a = INTERP_HOME.resolve(path.substring(1)).normalize();
+                            } else {
+                                a = PATH_STACK.peek().resolve(path).normalize();
                             }
 
                             Env env_import;
 
-                            PathStack.push(a.getParent());
+                            PATH_STACK.push(a.getParent());
 
                             try {
 
@@ -664,7 +719,7 @@ class LibInterp {
 
                             } finally {
 
-                                PathStack.pop();
+                                PATH_STACK.pop();
                             }
 
                             env._import(env_import, prefix);
@@ -682,7 +737,7 @@ class LibInterp {
 
                         case Eval:
 
-                            retval = aio(__eval_all(L, env).get(0).getValueString(), env);
+                            retval = aio(eval(L.get(0), env).getValueString(), env);
                             break;
 
                         case Type:
@@ -757,7 +812,7 @@ class LibInterp {
                                     break;
 
                                 case Copy:
-                                    retval = Operation.clone(_L);
+                                    retval = Operation.copy(_L);
                                     break;
 
                                 case Substr:
@@ -864,7 +919,7 @@ class Operation {
         return _L;
     }
 
-    public static Node insert(List<Node> L) throws InterpSystemError {
+    public static Node insert(List<Node> L) {
 
         Node _L = L.get(0);
         int i = L.get(1).getValueNumber().intValue();
@@ -891,7 +946,7 @@ class Operation {
         return _L;
     }
 
-    public static Node clone(List<Node> L) {
+    public static Node copy(List<Node> L) {
 
         return Node.createListNode(L.get(0).getSubNodes().stream().map(o -> o).collect(Collectors.toList()));
     }
@@ -935,7 +990,7 @@ class Operation {
     public static Node encode(List<Node> L) {
 
         String s = L.get(0).getValueString();
-        List<Node> _L = new ArrayList<>();
+        List<Node> _L = new LinkedList<>();
 
         for (char c : s.toCharArray()) {
 
@@ -1380,7 +1435,7 @@ class Env {
         return env;
     }
 
-    public Node lookup(String name) throws InterpSystemError {
+    public Node lookup(String name) {
 
         Node retval = this.define.get(name);
 
@@ -1403,10 +1458,12 @@ class Env {
 
     public void define(String name, Node value) {
 
+        if (this.define.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
+
         this.define.put(name, value);
     }
 
-    public void update(String name, Node value) throws InterpSystemError {
+    public void update(String name, Node value) {
 
         if (this.define.containsKey(name)) {
 
@@ -1446,18 +1503,18 @@ class Env {
         this.parent = env;
     }
 
-    public void export(String name, Node value) throws InterpSystemError {
+    public void export(String name, Node value) {
 
         if (this.export == null) this.export = new HashMap<>();
 
-        if (this.export.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExport, name));
+        if (this.export.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
 
         this.export.put(name, value);
     }
 }
 
 
-class InterpSystemError extends Exception {
+class InterpSystemError extends RuntimeException {
 
     public InterpSystemError(String s) {
 
@@ -1465,6 +1522,6 @@ class InterpSystemError extends Exception {
     }
 }
 
-class InterpSystemExit extends Exception {
+class InterpSystemExit extends RuntimeException {
 
 }
