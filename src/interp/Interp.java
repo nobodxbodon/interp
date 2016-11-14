@@ -694,7 +694,7 @@ class LibInterp {
 
                         case Import:
 
-                            String path = L.get(0).getValueString();
+                            String path = eval(L.get(0), env).getValueString();
                             String prefix = L.size() == 2 ? L.get(1).getValueString() : "";
                             Path a;
 
