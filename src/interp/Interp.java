@@ -396,7 +396,7 @@ class LibInterp {
 
         if (j == L.size()) {
 
-            return true;
+            return false;
 
         } else {
 
