@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static interp.ConstEnglish.*;
+//import static interp.ConstChinese.*;
 
 public class Interp {
 
@@ -1409,7 +1410,7 @@ class Env {
                 Gt, GtOp, Ge, GeOp, Lt, LtOp, Le, LeOp,
         }) {
 
-            ENV.define.put(lambda, new Node(LambdaType, lambda));
+            ENV.defines.put(lambda, new Node(LambdaType, lambda));
         }
 
         ENV.parent = null;
@@ -1417,27 +1418,30 @@ class Env {
     }
 
     private Env parent;
-    private Map<String, Node> define;
-    private Map<String, Node> export;
+    private Map<String, Node> defines;
+    private Map<String, Node> exports;
     private boolean external;
+    private boolean base;
 
     public Env() {
 
         this.parent = ENV;
-        this.define = new HashMap<>();
+        this.defines = new HashMap<>();
+        this.base = true;
     }
 
     public Env grow() {
 
         Env env = new Env();
         env.parent = this;
+        env.base = false;
 
         return env;
     }
 
     public Node lookup(String name) {
 
-        Node retval = this.define.get(name);
+        Node retval = this.defines.get(name);
 
         if (retval == null) {
 
@@ -1458,17 +1462,17 @@ class Env {
 
     public void define(String name, Node value) {
 
-        if (this.define.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
+        if (this.defines.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
 
-        this.define.put(name, value);
+        this.defines.put(name, value);
     }
 
     public void update(String name, Node value) {
 
-        if (this.define.containsKey(name)) {
+        if (this.defines.containsKey(name)) {
 
             if (this.external) throw new InterpSystemError(String.format(ErrorExternalSymbol, name));
-            else this.define.replace(name, value);
+            else this.defines.replace(name, value);
 
         } else {
 
@@ -1485,14 +1489,16 @@ class Env {
 
     public void _import(Env importedEnv, String prefix) {
 
-        if (importedEnv.export == null) return;
+        if (importedEnv.exports == null) return;
+
+        if (!this.base) throw new InterpSystemError(ErrorCannotImportInSubEnv);
 
         Env env = new Env();
 
         env.parent = this.parent;
         env.external = true;
 
-        for (Map.Entry<String, Node> item : importedEnv.export.entrySet()) {
+        for (Map.Entry<String, Node> item : importedEnv.exports.entrySet()) {
 
             env.define(prefix.isEmpty() ?
                             item.getKey() :
@@ -1505,11 +1511,13 @@ class Env {
 
     public void export(String name, Node value) {
 
-        if (this.export == null) this.export = new HashMap<>();
+        if (!this.base) throw new InterpSystemError(ErrorCannotExportInSubEnv);
 
-        if (this.export.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
+        if (this.exports == null) this.exports = new HashMap<>();
 
-        this.export.put(name, value);
+        if (this.exports.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
+
+        this.exports.put(name, value);
     }
 }
 

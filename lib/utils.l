@@ -25,6 +25,23 @@
 (export inc (define inc (lambda [n] (add n 1))))
 (export dec (define dec (lambda [n] (sub n 1))))
 
+(export end-of (lambda [L] (inc (length L))))
+
+(export part (define part (lambda [n L] (cond
+    [(eq L []) []]
+    [#true (cons (car-n n L) (#lambda n (cdr-n n L)))]
+))))
+
+(export car-n (define car-n (lambda [n L] (cond
+    [(or (eq n 0) (eq L [])) []]
+    [#true (cons (car L) (#lambda (dec n) (cdr L)))]
+))))
+
+(export cdr-n (define cdr-n (lambda [n L] (cond
+    [(or (eq n 0) (eq L [])) L]
+    [#true (#lambda (dec n) (cdr L))]
+))))
+
 (export rep (define rep (lambda [o i] (cond
     [(eq i 0) []]
     [#true (cons o (#lambda o (dec i)))]

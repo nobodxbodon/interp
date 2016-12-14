@@ -21,6 +21,8 @@ class ConstEnglish {
     static final String ErrorArgsAmount = "Arguments amount error, '%s' @ %s";
     static final String ErrorType = "Incorrect type";
     static final String ErrorExternalSymbol = "Forbidden to update external name '%s'";
+    static final String ErrorCannotExportInSubEnv = "Cannot export symbol in sub environment";
+    static final String ErrorCannotImportInSubEnv = "Cannot import module in sub environment";
 
     static final String ImportNameSeparator = "-";
 
