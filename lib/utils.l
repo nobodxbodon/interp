@@ -57,6 +57,16 @@
 (export false (lambda [] #false))
 (export const (define const (lambda [o] o)))
 
+(export complement (define complement (lambda [] (reduce 
+    (lambda [_L __L] (unique (filter (lambda [atom] (not-in atom __L)) _L)))
+    #args))))
+    
+(export union (define union (lambda [] (unique (apply merge #args)))))
+
+(export intersection (define intersection (lambda [] (reduce 
+    (lambda [_L __L] (unique (filter (lambda [atom] (in atom __L)) _L)))
+    #args))))
+
 (export reverse (define reverse (lambda [L] (cond
     [(eq L []) L]
     [#true (cons (kar L) (#lambda (kdr L)))]
@@ -262,3 +272,8 @@
 ; (export string-join-with (lambda [] ()))
 ; (export string-capitalize (lambda [] ()))
 ; (export string-search (lambda [] ()))
+
+(export to-chars (lambda [str] (cond
+    [(length-eq str 0) []]
+    [#true (cons (substr str 1 1) (#lambda (substr str 2 (length str))))]
+)))
