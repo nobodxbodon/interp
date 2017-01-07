@@ -226,11 +226,11 @@
 
 (export qsort (define qsort (lambda [L] (quick-sort L const))))
 
-(export dict-get (lambda [L name] ((lambda [i] (cond
+(export assoc (export dict-get (lambda [L name] ((lambda [i] (cond
     [(> i (length L)) &NOT-FOUND]
     [(eq (car (get L i)) name) (get (get L i) 2)]
     [#true (#lambda (inc i))]
-)) 1)))
+)) 1))))
 
 (export dict-set (lambda [L name value] ((lambda [i] (cond
     [(> i (length L)) &NOT-FOUND]

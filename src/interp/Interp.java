@@ -422,6 +422,8 @@ class LibInterp {
                 return amount == 2;
             case Update:
                 return amount == 2;
+            case Bind:
+                return amount == 2;
 
             case Cond:
                 return amount >= 1;
@@ -599,10 +601,15 @@ class LibInterp {
                     switch (op) {
 
                         case Define:
-
-
                             retval = eval(L.get(1), env);
                             env.define(L.get(0).getValueString(), retval);
+                            break;
+
+                        case Bind:
+                            retval = eval(L.get(1), env);
+                            for (int i = 0; i < retval.getSubNodesAmount(); i++) {
+                                env.define(L.get(0).getSubNode(i).getValueString(), retval.getSubNode(i));
+                            }
                             break;
 
                         case Update:
@@ -1247,6 +1254,10 @@ class Node {
 
             return this == another;
 
+        } else if (this.type.equals(ExceptionType)) {
+
+            return this.getValueString().equalsIgnoreCase(another.getValueString());
+
         } else if (this.type.equals(ListType)) {
 
             if (this.subNodes.size() != another.subNodes.size()) {
@@ -1403,7 +1414,7 @@ class Env {
 
         for (String lambda : new String[]{
 
-                Define, Update, Import, Export,
+                Define, Update, Bind, Import, Export,
 
                 Cond, Is, Eq, EqOp, Lambda, Progn, If, Apply, Quote, Let, Match, Eval, Type, Exit,
 
@@ -1531,8 +1542,6 @@ class Env {
 
         if (!this.base) throw new InterpSystemError(ErrorCannotExportInSubEnv);
 
-        if (!value.getType().equals(LambdaType)) throw new InterpSystemError(ErrorOnlyLambdaCanBeExported);
-
         if (this.exports == null) this.exports = new HashMap<>();
 
         if (this.exports.containsKey(name)) throw new InterpSystemError(String.format(ErrorNameAlreadyExist, name));
@@ -1579,9 +1588,8 @@ class Const {
     static final String ErrorArgsAmount = "Arguments amount error, '%s' @ %s";
     static final String ErrorType = "Incorrect type";
     static final String ErrorExternalSymbol = "Forbidden to update external name '%s'";
-    static final String ErrorCannotExportInSubEnv = "Cannot export symbol in sub environment";
-    static final String ErrorCannotImportInSubEnv = "Cannot import module in sub environment";
-    static final String ErrorOnlyLambdaCanBeExported = "Only :lambda type can be exported";
+    static final String ErrorCannotExportInSubEnv = "cannot export symbol in sub environment";
+    static final String ErrorCannotImportInSubEnv = "cannot import module in sub environment";
 
     static final String ImportNameSeparator = "-";
 
@@ -1601,7 +1609,7 @@ class Const {
     static final String Main = "main";
     static final String MainArgs = "args";
 
-    static final String ValueOfLambdaType = "__lambda__";
+    static final String ValueOfLambdaType = "closure";
     static final String ValueOfListType = "[]";
     static final String ValueOfExprType = "()";
     static final String ValueOfNoneType = "#none";
@@ -1614,6 +1622,7 @@ class Const {
     static final String BoundLambda = "#lambda";
 
     static final String Define = "define";
+    static final String Bind = "bind";
     static final String Update = "update";
 
     static final String Cond = "cond";
