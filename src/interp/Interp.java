@@ -22,37 +22,45 @@ public class Interp {
             String in;
             Node out;
 
-            Env env = new Env();
-            env.define(NameOfPreviousValue, Node.createNoneNode());
-
             while (true) {
 
-                System.out.printf("[%s]<<< ", ConsolePrompt);
+                Env env = new Env();
+                env.define(NameOfPreviousValue, Node.createNoneNode());
+                LibInterp.aio("(import \"/utils.l\")", env);
 
-                in = inScanner.nextLine();
+                while (true) {
 
-                if (in.isEmpty()) continue;
+                    System.out.printf("[%s]<<< ", ConsolePrompt);
 
-                try {
+                    in = inScanner.nextLine();
 
-                    out = LibInterp.aio(in, env);
+                    if (in.isEmpty()) continue;
+                    if (in.equalsIgnoreCase("$reload")) {
+                        System.out.println("\n=========== Reloaded ===========\n");
+                        break;
+                    }
 
-                    env.update(NameOfPreviousValue, out);
+                    try {
 
-                    System.out.printf("[%s]>>> ", ConsolePrompt);
-                    System.out.println(out);
+                        out = LibInterp.aio(in, env);
 
-                } catch (InterpSystemError e) {
+                        env.update(NameOfPreviousValue, out);
 
-                    System.out.println(e.getMessage());
+                        System.out.printf("[%s]>>> ", ConsolePrompt);
+                        System.out.println(out);
 
-                } catch (InterpSystemExit interpSystemExit) {
+                    } catch (InterpSystemError | InterpSystemAssert e) {
 
-                    System.exit(0);
+                        System.out.println(e.getMessage());
 
-                } finally {
+                    } catch (InterpSystemExit interpSystemExit) {
 
-                    System.out.println();
+                        System.exit(0);
+
+                    } finally {
+
+                        System.out.println();
+                    }
                 }
             }
 
@@ -85,12 +93,12 @@ public class Interp {
 
 class LibInterp {
 
-    private static final Stack<Path> PATH_STACK = new Stack<>();
-    private static final Path INTERP_HOME;
+    private static final Stack<Path> ImportedPathStack = new Stack<>();
+    private static final Path LibraryRoot;
 
     static {
-        PATH_STACK.push(Paths.get(".").toAbsolutePath().normalize());
-        INTERP_HOME = Paths.get("C:\\Users\\NER0\\IdeaProjects\\interp\\lib");
+        ImportedPathStack.push(Paths.get(".").toAbsolutePath().normalize());
+        LibraryRoot = Paths.get("/home/ner0/IdeaProjects/interp/lib/");
     }
 
     public static Node aio(String code, Env env) {
@@ -230,13 +238,19 @@ class LibInterp {
         switch (s) {
             case "(":
                 node = new Node(ExprType, ValueOfExprType);
-                try {while (true) node.addSubNode(__parse(L));}
-                catch (ParseRollback e) { return node; }
+                try {
+                    while (true) node.addSubNode(__parse(L));
+                } catch (ParseRollback e) {
+                    return node;
+                }
 
             case "[":
                 node = new Node(ListType, ValueOfListType);
-                try {while (true) node.addSubNode(__parse(L));}
-                catch (ParseRollback e) { return node; }
+                try {
+                    while (true) node.addSubNode(__parse(L));
+                } catch (ParseRollback e) {
+                    return node;
+                }
 
             case ")":
             case "]":
@@ -422,8 +436,6 @@ class LibInterp {
                 return amount == 2;
             case Update:
                 return amount == 2;
-            case Bind:
-                return amount == 2;
 
             case Cond:
                 return amount >= 1;
@@ -605,13 +617,6 @@ class LibInterp {
                             env.define(L.get(0).getValueString(), retval);
                             break;
 
-                        case Bind:
-                            retval = eval(L.get(1), env);
-                            for (int i = 0; i < retval.getSubNodesAmount(); i++) {
-                                env.define(L.get(0).getSubNode(i).getValueString(), retval.getSubNode(i));
-                            }
-                            break;
-
                         case Update:
 
                             retval = eval(L.get(1), env);
@@ -721,14 +726,14 @@ class LibInterp {
                             Path a;
 
                             if (path.startsWith("/") || path.startsWith("\\")) {
-                                a = INTERP_HOME.resolve(path.substring(1)).normalize();
+                                a = LibraryRoot.resolve(path.substring(1)).normalize();
                             } else {
-                                a = PATH_STACK.peek().resolve(path).normalize();
+                                a = ImportedPathStack.peek().resolve(path).normalize();
                             }
 
                             Env env_import;
 
-                            PATH_STACK.push(a.getParent());
+                            ImportedPathStack.push(a.getParent());
 
                             try {
 
@@ -741,7 +746,7 @@ class LibInterp {
 
                             } finally {
 
-                                PATH_STACK.pop();
+                                ImportedPathStack.pop();
                             }
 
                             env._import(env_import, prefix);
@@ -803,7 +808,7 @@ class LibInterp {
                         case Assert:
                             if (!eval(L.get(0), env).getValueBool()) {
 
-                                throw new InterpSystemError(node.toString());
+                                throw new InterpSystemAssert(L.get(0).toString());
 
                             } else {
 
@@ -1414,7 +1419,7 @@ class Env {
 
         for (String lambda : new String[]{
 
-                Define, Update, Bind, Import, Export,
+                Define, Update, Import, Export,
 
                 Cond, Is, Eq, EqOp, Lambda, Progn, If, Apply, Quote, Let, Match, Eval, Type, Exit,
 
@@ -1563,6 +1568,14 @@ class InterpSystemError extends RuntimeException {
     }
 }
 
+class InterpSystemAssert extends RuntimeException {
+
+    public InterpSystemAssert(String s) {
+
+        super(String.format(AssertionPrefix, s));
+    }
+}
+
 class InterpSystemExit extends RuntimeException {
 
 }
@@ -1576,6 +1589,7 @@ class Const {
     static final String SystemFinishedPrompt = "System finished with";
 
     static final String ErrorPrefix = "*** System Error: %s";
+    static final String AssertionPrefix = "*** Assertion Fail: %s";
     static final String ErrorNotFoundSymbol = "Not found symbol '%s'";
     static final String ErrorNotFoundFile = "Not found file '%s'";
     static final String ErrorNotMatch = "Match not match";
@@ -1622,7 +1636,6 @@ class Const {
     static final String BoundLambda = "#lambda";
 
     static final String Define = "define";
-    static final String Bind = "bind";
     static final String Update = "update";
 
     static final String Cond = "cond";

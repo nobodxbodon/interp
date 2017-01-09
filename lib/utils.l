@@ -8,7 +8,7 @@
 (export kdr  (define kdr  (lambda [L]   (delete (copy L) (length L)))))
 (export kons (define kons (lambda [L o] (insert (copy L) (inc (length L)) o))))
 
-(export append kons)
+(export append (define append kons))
 
 (export cadr (define cadr (lambda [L] (car (cdr L)))))
 
@@ -47,14 +47,16 @@
     [#true (cons o (#lambda o (dec i)))]
 ))))
 
+(export be-empty (define be-empty (lambda [L] (eq L []))))
+
 (export exp  (lambda [x e] (apply * (rep x e))))
 (export exp2 (lambda [x] (* x x)))
 (export exp3 (lambda [x] (* x x x)))
 
 (export default (lambda [value default-value] (if (eq value #none) default-value value)))
 
-(export true  (lambda [] #true))
-(export false (lambda [] #false))
+(export true  (define true  (lambda [] #true)))
+(export false (define false (lambda [] #false)))
 (export const (define const (lambda [o] o)))
 
 (export complement (define complement (lambda [] (reduce 
@@ -79,10 +81,10 @@
     [#true (#lambda ((car chain-fn) o) (cdr chain-fn))]
 )))
 
-(export each (lambda [Fn L] (cond
+(export each (define each (lambda [Fn L] (cond
     [(eq L []) #none]
     [#true (progn (Fn (car L)) (#lambda Fn (cdr L)))]
-)))
+))))
 
 (export map (define map (lambda [Fn L] (cond
     [(eq L []) []]
@@ -108,7 +110,7 @@
     [#true (#lambda Fn (cdr L))]
 ))))
 
-(export validate (lambda [L Format] (progn
+(export validate (define validate (lambda [L Format] (progn
     (define atomic [:number :string :bool :none :exception :blob :handle])
 
     ((lambda [L Format] (cond
@@ -125,7 +127,7 @@
         )]
         [#true #false]
     )) L Format)
-)))
+))))
 
 (export in (define in (lambda [o L] (cond
     [(eq L []) #false]
@@ -135,21 +137,9 @@
 
 (export not-in (define not-in (lambda [o L] (not (in o L)))))
 
-(export max (define max (lambda [L]
-    ((lambda [n L] (cond
-        [(eq L []) n]
-        [(> (car L) n) (#lambda (car L) (cdr L))]
-        [#true (#lambda n (cdr L))]
-    )) (car L) (cdr L))
-)))
+(export max (define max (lambda [L] (reduce (lambda [a b] (if (> a b) a b)) L))))
 
-(export min (define min (lambda [L]
-    ((lambda [n L] (cond
-        [(eq L []) n]
-        [(< (car L) n) (#lambda (car L) (cdr L))]
-        [#true (#lambda n (cdr L))]
-    )) (car L) (cdr L))
-)))
+(export min (define min (lambda [L] (reduce (lambda [a b] (if (< a b) a b)) L))))
 
 (export at (define at (lambda [e L] ((lambda [e L n] (cond
     [(eq L []) &NOT-FOUND]
@@ -207,8 +197,27 @@
     [#true (let [[_ (Fn)]] (if (eq _ &END) [] (cons _ (#lambda (inc i)))))]
 )) 1))))
 
-(export all (define all (lambda [L] (apply and L))))
-(export any (define any (lambda [L] (apply or  L))))
+(export all (define all (lambda [L] (progn
+
+    (assert (not-eq L []))
+
+    ((lambda [L] (cond
+        [(eq L []) #true]
+        [(eq (car L) #false) #false]
+        [#true (#lambda (cdr L))]
+    )) L)
+))))
+
+(export any (define any (lambda [L] (progn
+
+    (assert (not-eq L []))
+
+    ((lambda [L] (cond
+        [(eq L []) #false]
+        [(eq (car L) #true) #true]
+        [#true (#lambda (cdr L))]
+    )) L)
+))))
 
 (export length-eq (define length-eq (lambda [L n] (eq (length L) n))))
 (export type-eq (define type-eq   (lambda [o t] (eq (type o) t))))
@@ -226,39 +235,60 @@
 
 (export qsort (define qsort (lambda [L] (quick-sort L const))))
 
-(export assoc (export dict-get (lambda [L name] ((lambda [i] (cond
-    [(> i (length L)) &NOT-FOUND]
-    [(eq (car (get L i)) name) (get (get L i) 2)]
-    [#true (#lambda (inc i))]
-)) 1))))
+(export dict-validate (define dict-validate (lambda [dict] (and
+    (type-eq dict :list)
+    (or
+        (be-empty dict)
+        (all (map (lambda [item] (validate item [:string true])) dict))
+    )
+))))
 
-(export dict-set (lambda [L name value] ((lambda [i] (cond
-    [(> i (length L)) &NOT-FOUND]
-    [(eq (car (get L i)) name) (set (get L i) 2 value)]
-    [#true (#lambda (inc i))]
-)) 1)))
+(export product (lambda [] ((lambda [L] (reduce (lambda [M N] (apply merge (map (lambda [m] (map (lambda [n] (append m n)) N)) M))) L)) (merge [(map (lambda [n] [n]) (car #args))] (cdr #args)))))
 
-(export dict-insert (lambda [L name value] 
-    (insert L (inc (length L)) [name value])
-))
+(export assoc (export dict-get (define dict-get (lambda [L name]
+    ((lambda [i] (cond
+        [(> i (length L)) &NOT-FOUND]
+        [(eq (car (get L i)) name) (get (get L i) 2)]
+        [#true (#lambda (inc i))]
+    )) 1)))))
 
-(export dict-delete (lambda [L name] ((lambda [i] (cond
-    [(> i (length L)) &NOT-FOUND]
-    [(eq (car (get L i)) name) (delete L i)]
-    [#true (#lambda (inc i))]
-)) 1)))
+(export dict-get-item (define dict-get-item (lambda [L name]
+    ((lambda [i] (cond
+        [(> i (length L)) &NOT-FOUND]
+        [(eq (car (get L i)) name) (get L i)]
+        [#true (#lambda (inc i))]
+    )) 1))))
 
-(export dict-names (lambda [L] ((lambda [i] (cond
-    [(> i (length L)) []]
-    [#true (cons (car (get L i)) (#lambda (inc i)))]
-)) 1)))
+(export dict-set (define dict-set
+    (lambda [L name value]
+        ((lambda [i] (cond
+            [(> i (length L)) &NOT-FOUND]
+            [(eq (car (get L i)) name) (set (get L i) 2 value)]
+            [#true (#lambda (inc i))]
+        )) 1))))
 
-(export dict-values (lambda [L] ((lambda [i] (cond
+(export dict-insert (define dict-insert
+    (lambda [L name value]
+        (insert L (inc (length L)) [name value]))))
+
+(export dict-delete (define dict-delete (lambda [L name]
+    ((lambda [i] (cond
+        [(> i (length L)) &NOT-FOUND]
+        [(eq (car (get L i)) name) (delete L i)]
+        [#true (#lambda (inc i))]
+    )) 1))))
+
+(export dict-keys (define dict-keys (lambda [L]
+    ((lambda [i] (cond
+        [(> i (length L)) []]
+        [#true (cons (car (get L i)) (#lambda (inc i)))]
+    )) 1))))
+
+(export dict-values (define dict-values (lambda [L] ((lambda [i] (cond
     [(> i (length L)) []]
     [#true (cons (cadr (get L i)) (#lambda (inc i)))]
-)) 1)))
+)) 1))))
 
-;; TODO: 将来再写。
 ; (export string-start-with (lambda [s prefix] (cond
     ; [(> (length prefix) (length s)) #false]
     ; [(= (length prefix) (length s)) (eq s prefix)]
@@ -277,3 +307,12 @@
     [(length-eq str 0) []]
     [#true (cons (substr str 1 1) (#lambda (substr str 2 (length str))))]
 )))
+
+(export options (export dict-merge (lambda [permitted-options options] (progn
+
+    (assert (and (dict-validate permitted-options) (dict-validate options)))
+    (assert (not (be-empty permitted-options)))
+    (assert (or (be-empty options) (all (map (let [[permitted-keys (dict-keys permitted-options)]] (lambda [key] (in key permitted-keys))) (dict-keys options)))))
+
+    (map (let [[options-keys (dict-keys options)]] (lambda [option] (let [[key (car option)]] (if (in key options-keys) (dict-get-item options key) option)))) permitted-options)
+))))
