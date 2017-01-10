@@ -11,6 +11,10 @@
 (export append (define append kons))
 
 (export cadr (define cadr (lambda [L] (car (cdr L)))))
+(export cddr (define cddr (lambda [L] (cdr (cdr L)))))
+(export caar (define caar (lambda [L] (car (car L)))))
+
+(export cadar (define cadar (lambda [L] (car (cdr (car L))))))
 
 (export 1st (define 1st (lambda [L] (get L 1))))
 (export 2nd (define 2nd (lambda [L] (get L 2))))
@@ -244,6 +248,9 @@
 ))))
 
 (export product (lambda [] ((lambda [L] (reduce (lambda [M N] (apply merge (map (lambda [m] (map (lambda [n] (append m n)) N)) M))) L)) (merge [(map (lambda [n] [n]) (car #args))] (cdr #args)))))
+; (export product(lambda[]((lambda[L](reduce(lambda[M N](apply merge(map(lambda[m](map(lambda[n](append m n))N))M)))L))(merge[(map(lambda[n][n])(car #args))](cdr #args)))))
+; product = ->(*args){ ->(_L){ _L.reduce(&->(_M, _N){ _M.map(&->(m){ _N.map(&->(n){ m.dup.push(n) }) }).reduce(&:+) }) }[[args[0].map(&->(n){[n]})] + args[1..-1]] }
+; product=->(*args){->(_L){_L.reduce(&->(_M, _N){_M.map(&->(m){_N.map(&->(n){m.dup.push(n)})}).reduce(&:+)})}[[args[0].map(&->(n){[n]})]+args[1..-1]]}
 
 (export assoc (export dict-get (define dict-get (lambda [L name]
     ((lambda [i] (cond
@@ -284,6 +291,11 @@
         [#true (cons (car (get L i)) (#lambda (inc i)))]
     )) 1))))
 
+(export super-map (define super-map (lambda [Fn L] (cond
+    [(eq L []) []]
+    [#true (cons (apply Fn (car L)) (#lambda Fn (cdr L)))]
+))))
+
 (export dict-values (define dict-values (lambda [L] ((lambda [i] (cond
     [(> i (length L)) []]
     [#true (cons (cadr (get L i)) (#lambda (inc i)))]
@@ -303,16 +315,29 @@
 ; (export string-capitalize (lambda [] ()))
 ; (export string-search (lambda [] ()))
 
-(export to-chars (lambda [str] (cond
+(export to-chars (define to-chars (lambda [str] (cond
     [(length-eq str 0) []]
     [#true (cons (substr str 1 1) (#lambda (substr str 2 (length str))))]
-)))
+))))
 
 (export options (export dict-merge (lambda [permitted-options options] (progn
 
-    (assert (and (dict-validate permitted-options) (dict-validate options)))
-    (assert (not (be-empty permitted-options)))
-    (assert (or (be-empty options) (all (map (let [[permitted-keys (dict-keys permitted-options)]] (lambda [key] (in key permitted-keys))) (dict-keys options)))))
+   ; (assert (and (dict-validate permitted-options) (dict-validate options)))
+   ; (assert (not (be-empty permitted-options)))
+   ; (assert (or (be-empty options) (all (map (let [[permitted-keys (dict-keys permitted-options)]] (lambda [key] (in key permitted-keys))) (dict-keys options)))))
 
     (map (let [[options-keys (dict-keys options)]] (lambda [option] (let [[key (car option)]] (if (in key options-keys) (dict-get-item options key) option)))) permitted-options)
 ))))
+
+(define options (lambda [M N] (map (let [[NK (dict-keys N)]] (lambda [m] (let [k (car m)] (if (in k NK) (dict-get-item N k) m)))) M)))
+; (定义 合并选项 (算法 [元选项 变选项] (迭代 (使 [[诸键 (取诸键 变选项)]] (算法 [选项] (使 [键 (取首项 选项)] (若 (有 键 诸键) (取项 变选项 键) 选项)))) 元选项)))
+
+(export format (define format (lambda [] (apply concat ((lambda [S L] (cond
+  [(eq S []) []]
+  [#true (progn
+    ;(println S)
+    (if (and (eq (car S) "#") (if (length-eq S 1) #false (eq (cadr S) "s"))) (cons (car L) (#lambda (cddr S) (cdr L))) (cons (car S) (#lambda (cdr S) L)))
+  )]
+)) (to-chars (car #args)) (cdr #args))))))
+
+(export wrap (define wrap (lambda [n] [n])))
