@@ -9,6 +9,7 @@
 (export kons (define kons (lambda [L o] (insert (copy L) (inc (length L)) o))))
 
 (export append (define append kons))
+(export append-into (define append-into (lambda [L object] (insert L (inc (length L)) object))))
 
 (export cadr (define cadr (lambda [L] (car (cdr L)))))
 (export cddr (define cddr (lambda [L] (cdr (cdr L)))))
@@ -250,7 +251,7 @@
 (export product (lambda [] ((lambda [L] (reduce (lambda [M N] (apply merge (map (lambda [m] (map (lambda [n] (append m n)) N)) M))) L)) (merge [(map (lambda [n] [n]) (car #args))] (cdr #args)))))
 ; (export product(lambda[]((lambda[L](reduce(lambda[M N](apply merge(map(lambda[m](map(lambda[n](append m n))N))M)))L))(merge[(map(lambda[n][n])(car #args))](cdr #args)))))
 ; product = ->(*args){ ->(_L){ _L.reduce(&->(_M, _N){ _M.map(&->(m){ _N.map(&->(n){ m.dup.push(n) }) }).reduce(&:+) }) }[[args[0].map(&->(n){[n]})] + args[1..-1]] }
-; product=->(*args){->(_L){_L.reduce(&->(_M, _N){_M.map(&->(m){_N.map(&->(n){m.dup.push(n)})}).reduce(&:+)})}[[args[0].map(&->(n){[n]})]+args[1..-1]]}
+; product=->(*args){->(_L){_L.reduce(&->(_M,_N){_M.map(&->(m){_N.map(&->(n){m.dup.push(n)})}).reduce(&:+)})}[[args[0].map(&->(n){[n]})]+args[1..-1]]}
 
 (export assoc (export dict-get (define dict-get (lambda [L name]
     ((lambda [i] (cond

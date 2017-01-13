@@ -14,6 +14,40 @@ import static interp.Const.*;
 
 public class Interp {
 
+    private static String __gen_margin(int n){
+        String s = "";
+        for (int i = 0; i < n; i++) {
+            s += " ";
+        }
+        return s;
+    }
+
+    private static void __output_env(Env env, boolean _switch){
+
+        if (env.parent != null && !env.parent.getModuleName().equalsIgnoreCase("*root*") && _switch) {
+            __output_env(env.parent, _switch);
+        }
+
+        System.out.println(env.getModuleName());
+        int i = 1;
+        int margin_needed = env.defines.keySet().stream().mapToInt(String::length).summaryStatistics().getMax() + 1;
+        for (Map.Entry<String, Node> item : env.defines.entrySet().stream().sorted((x,y) -> x.getKey().compareTo(y.getKey())).collect(Collectors.toList())) {
+            System.out.printf("    %3d %s%s: %s\n", i++, __gen_margin(margin_needed - item.getKey().length()), item.getKey(), item.getValue().toString().length() < 80 ? item.getValue() : item.getValue().toString().substring(0, 77) + "...");
+        }
+    }
+
+    private static boolean runInterpCommands(String s, Env env){
+        switch (s.toLowerCase()){
+            case "$symbols":
+                __output_env(env, true);
+                return true;
+            case "$env":
+                __output_env(env, false);
+                return true;
+            default: return false;
+        }
+    }
+
     public static void main(String[] args) {
 
         if (args.length == 0) {
@@ -35,10 +69,10 @@ public class Interp {
                     in = inScanner.nextLine();
 
                     if (in.isEmpty()) continue;
-                    if (in.equalsIgnoreCase("$reload")) {
-                        System.out.println("\n=========== Reloaded ===========\n");
-                        break;
-                    }
+
+                    if (in.equalsIgnoreCase("$reload")) { System.out.println("\n=========== Reloaded ===========\n"); break; }
+
+                    if (runInterpCommands(in, env)) continue;
 
                     try {
 
@@ -738,6 +772,7 @@ class LibInterp {
                             try {
 
                                 env_import = new Env();
+                                env_import.setModuleName(a.getFileName().toString());
                                 aio(progn(new String(Files.readAllBytes(a))), env_import);
 
                             } catch (IOException e) {
@@ -1449,19 +1484,22 @@ class Env {
         ENV.parent = null;
         ENV.external = true;
         ENV.base = false;
+        ENV.moduleName = "*Root*";
     }
 
-    private Env parent;
-    private Map<String, Node> defines;
+    public Env parent;
+    public Map<String, Node> defines;
     private Map<String, Node> exports;
     private boolean external;
     private boolean base;
+    private String moduleName;
 
     public Env() {
 
         this.parent = ENV;
         this.defines = new HashMap<>();
         this.base = true;
+        this.moduleName = "*Base*";
     }
 
     public Env grow() {
@@ -1469,8 +1507,17 @@ class Env {
         Env env = new Env();
         env.parent = this;
         env.base = false;
+        env.moduleName = "*Lambda*";
 
         return env;
+    }
+
+    public void setModuleName(String name){
+        moduleName = name;
+    }
+
+    public String getModuleName(){
+        return moduleName;
     }
 
     public Node lookup(String name) {
@@ -1531,6 +1578,7 @@ class Env {
 
         env.parent = this.parent;
         env.external = true;
+        env.moduleName = importedEnv.moduleName;
 
         for (Map.Entry<String, Node> item : importedEnv.exports.entrySet()) {
 
