@@ -24,8 +24,8 @@ public class Interp {
 
     private static void __output_env(Env env, boolean _switch){
 
-        if (env.parent != null && !env.parent.getModuleName().equalsIgnoreCase("*root*") && _switch) {
-            __output_env(env.parent, _switch);
+        if (env.parent != null && _switch) {
+            __output_env(env.parent, _switch) ;
         }
 
         System.out.println(env.getModuleName());
@@ -137,7 +137,7 @@ class LibInterp {
 
     public static Node aio(String code, Env env) {
 
-        return eval(parse(lex(clean(code))), env);
+        return eval(parse(lex(clean(code))), env, false);
     }
 
     public static Node runMain(String filePath, String[] args) {
@@ -156,7 +156,7 @@ class LibInterp {
 
     public static String progn(String s) {
 
-        return String.format("(%s %s)", Progn, s);
+        return String.format("(%s %s\n)", Progn, s);
     }
 
     public static String clean(String code) {
@@ -264,7 +264,7 @@ class LibInterp {
 
     private static Node __parse(List<String> L) {
 
-        if (L.isEmpty()) throw new InterpSystemError(ErrorSyntaxTooLittle);
+        if (L.isEmpty()) throw new InterpSystemError(ErrorSyntaxIncorrectInput);
 
         String s = L.remove(0);
         Node node;
@@ -370,11 +370,11 @@ class LibInterp {
         try {
             node = __parse(fragments);
         } catch (ParseRollback e) {
-            throw new InterpSystemError(ErrorSyntaxTooLittle);
+            throw new InterpSystemError(ErrorSyntaxIncorrectInput);
         }
 
         if (!fragments.isEmpty()) {
-            throw new InterpSystemError(ErrorSyntaxTooMuch);
+            throw new InterpSystemError(ErrorSyntaxTooMuchChars);
         } else {
             return node;
         }
@@ -391,7 +391,7 @@ class LibInterp {
             Node node_i = L.get(i);
             Node node_j = L.get(j);
 
-            return eval(node_i, env).eq(eval(node_j, env)) && __eq(j, j + 1, L, env);
+            return eval(node_i, env, false).eq(eval(node_j, env, false)) && __eq(j, j + 1, L, env);
         }
     }
 
@@ -436,7 +436,7 @@ class LibInterp {
             Node node_i = L.get(i);
             Node node_j = L.get(j);
 
-            return eval(node_i, env).getValueBool() && eval(node_j, env).getValueBool() && __and(j, j + 1, L, env);
+            return eval(node_i, env, false).getValueBool() && eval(node_j, env, false).getValueBool() && __and(j, j + 1, L, env);
         }
     }
 
@@ -451,14 +451,14 @@ class LibInterp {
             Node node_i = L.get(i);
             Node node_j = L.get(j);
 
-            return (eval(node_i, env).getValueBool() || eval(node_j, env).getValueBool()) || __or(j, j + 1, L, env);
+            return (eval(node_i, env, false).getValueBool() || eval(node_j, env, false).getValueBool()) || __or(j, j + 1, L, env);
         }
     }
 
     private static List<Node> __eval_all(List<Node> L, Env env) {
         List<Node> _L = new LinkedList<>();
 
-        for (Node n : L) _L.add(eval(n, env));
+        for (Node n : L) _L.add(eval(n, env, false));
 
         return _L;
     }
@@ -572,7 +572,7 @@ class LibInterp {
         }
     }
 
-    public static Node eval(Node node, Env env) {
+    public static Node eval(Node node, Env env, boolean avoid) {
 
         Node retval = Node.createNoneNode();
         String type = node.getType();
@@ -602,7 +602,7 @@ class LibInterp {
                 List<Node> list = new LinkedList<>();
 
                 for (Node subNode : node.getSubNodes()) {
-                    list.add(eval(subNode, env));
+                    list.add(eval(subNode, env, false));
                 }
 
                 retval = Node.createListNode(list);
@@ -610,7 +610,7 @@ class LibInterp {
 
             case ExprType:
 
-                Node opNode = eval(node.getSubNode(0), env);
+                Node opNode = eval(node.getSubNode(0), env, false);
 
                 if (!opNode.getType().equals(LambdaType)) throw new InterpSystemError(ErrorType);
 
@@ -627,7 +627,7 @@ class LibInterp {
                     if (!(args.getSubNodesAmount() == 0 || L.size() == args.getSubNodesAmount()))
                         throw new InterpSystemError(String.format(ErrorArgsAmount, opNode, node));
 
-                    List<Node> parameters = __eval_all(L, env);
+                    List<Node> parameters = avoid ? L : __eval_all(L, env);
 
                     for (int i = 0; i < args.getSubNodesAmount(); i++) {
 
@@ -637,7 +637,7 @@ class LibInterp {
                     env0.define(BoundArgs, Node.createListNode(parameters));
                     env0.define(BoundLambda, opNode);
 
-                    retval = eval(expr, env0);
+                    retval = eval(expr, env0, false);
 
                 } else {
 
@@ -647,13 +647,13 @@ class LibInterp {
                     switch (op) {
 
                         case Define:
-                            retval = eval(L.get(1), env);
+                            retval = eval(L.get(1), env, false);
                             env.define(L.get(0).getValueString(), retval);
                             break;
 
                         case Update:
 
-                            retval = eval(L.get(1), env);
+                            retval = eval(L.get(1), env, false);
 
                             try {
 
@@ -670,16 +670,16 @@ class LibInterp {
                             retval = Node.createNoneNode();
 
                             for (Node n : L) {
-                                if (eval(n.getSubNode(0), env).getValueString().equals(ValueOfBoolTypeTrue)) {
-                                    retval = eval(n.getSubNode(1), env);
+                                if (eval(n.getSubNode(0), env, false).getValueString().equals(ValueOfBoolTypeTrue)) {
+                                    retval = eval(n.getSubNode(1), env, false);
                                     break;
                                 }
                             }
                             break;
 
                         case Is:
-                            Node _a = eval(L.get(0), env);
-                            Node _b = eval(L.get(1), env);
+                            Node _a = eval(L.get(0), env, false);
+                            Node _b = eval(L.get(1), env, false);
                             retval = Node.createBoolNode(_a == _b);
                             break;
 
@@ -696,18 +696,18 @@ class LibInterp {
 
                         case Progn:
 
-                            for (Node n : L) retval = eval(n, env);
+                            for (Node n : L) retval = eval(n, env, false);
                             break;
 
                         case If:
 
-                            if (eval(L.get(0), env).getValueBool()) {
+                            if (eval(L.get(0), env, false).getValueBool()) {
 
-                                retval = eval(L.get(1), env);
+                                retval = eval(L.get(1), env, false);
 
                             } else {
 
-                                retval = (L.size() == 3) ? eval(L.get(2), env) : Node.createNoneNode();
+                                retval = (L.size() == 3) ? eval(L.get(2), env, false) : Node.createNoneNode();
                             }
                             break;
 
@@ -715,29 +715,23 @@ class LibInterp {
 
                             List<Node> arrayList = new LinkedList<>();
 
-                            arrayList.add(eval(L.get(0), env));
-                            arrayList.addAll(eval(L.get(1), env).getSubNodes());
+                            arrayList.add(L.get(0));
+                            arrayList.addAll(eval(L.get(1), env, false).getSubNodes());
 
-                            retval = eval(Node.createExprNode(arrayList), env);
+                            retval = eval(Node.createExprNode(arrayList), env, true);
                             break;
 
                         case Quote:
 
-                            retval = Node.createStringNode(eval(L.get(0), env).toString());
+                            retval = Node.createStringNode(eval(L.get(0), env, false).toString());
                             break;
-
-//                        case "env":
-//                            List a = new ArrayList();
-//                            for (Map.Entry<String, Node> item : env.locals().entrySet()) {
-//                                a.add(node.createListNode());
-//                            }
 
                         case Let:
                             Env let_env = env.grow();
                             for (Node item : L.get(0).getSubNodes()) {
-                                let_env.define(item.getSubNode(0).getValueString(), LibInterp.eval(item.getSubNode(1), env));
+                                let_env.define(item.getSubNode(0).getValueString(), LibInterp.eval(item.getSubNode(1), env, false));
                             }
-                            retval = eval(L.get(1), let_env);
+                            retval = eval(L.get(1), let_env, false);
 
                             break;
 
@@ -746,7 +740,7 @@ class LibInterp {
                             List<Node> match_L = __eval_all(L.subList(0, 2), env);
 
                             if (__match(match_L.get(0), match_L.get(1), match_env)) {
-                                retval = eval(L.get(2), match_env);
+                                retval = eval(L.get(2), match_env, false);
                             } else {
                                 throw new InterpSystemError(ErrorNotMatch);
                             }
@@ -755,7 +749,7 @@ class LibInterp {
 
                         case Import:
 
-                            String path = eval(L.get(0), env).getValueString();
+                            String path = eval(L.get(0), env, false).getValueString();
                             String prefix = L.size() == 2 ? L.get(1).getValueString() : "";
                             Path a;
 
@@ -792,19 +786,19 @@ class LibInterp {
 
                         case Export:
 
-                            retval = eval(L.get(1), env);
+                            retval = eval(L.get(1), env, false);
                             env.export(L.get(0).getValueString(), retval);
 
                             break;
 
                         case Eval:
 
-                            retval = aio(eval(L.get(0), env).getValueString(), env);
+                            retval = aio(eval(L.get(0), env, false).getValueString(), env);
                             break;
 
                         case Type:
 
-                            retval = Node.createTypeNode(eval(L.get(0), env).getType());
+                            retval = Node.createTypeNode(eval(L.get(0), env, false).getType());
                             break;
 
                         case Exit:
@@ -837,11 +831,11 @@ class LibInterp {
 
                         case Not:
 
-                            retval = eval(L.get(0), env).getValueBool() ? Node.createBoolNode(false) : Node.createBoolNode(true);
+                            retval = eval(L.get(0), env, false).getValueBool() ? Node.createBoolNode(false) : Node.createBoolNode(true);
                             break;
 
                         case Assert:
-                            if (!eval(L.get(0), env).getValueBool()) {
+                            if (!eval(L.get(0), env, false).getValueBool()) {
 
                                 throw new InterpSystemAssert(L.get(0).toString());
 
@@ -1641,8 +1635,8 @@ class Const {
     static final String ErrorNotFoundSymbol = "Not found symbol '%s'";
     static final String ErrorNotFoundFile = "Not found file '%s'";
     static final String ErrorNotMatch = "Match not match";
-    static final String ErrorSyntaxTooLittle = "Too little input";
-    static final String ErrorSyntaxTooMuch = "Too many input";
+    static final String ErrorSyntaxIncorrectInput = "输入不完整，缺少闭合括号。";
+    static final String ErrorSyntaxTooMuchChars = "输入不完整，存在多余的词法单位。";
     static final String ErrorSyntaxUndefined = "Undefined literal '%s'";
     static final String ErrorSyntaxIncorrectEscape = "Incorrect escape";
     static final String ErrorCircleInsert = "Can not insert into one's itself";
