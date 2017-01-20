@@ -342,3 +342,13 @@
 )) (to-chars (car #args)) (cdr #args))))))
 
 (export wrap (define wrap (lambda [n] [n])))
+
+(export average (define average (lambda [L] (let [[length (length L)]] (/ (apply + L) length)))))
+
+(export ~filter (define ~filter (lambda [op] (lambda [L] (filter op L)))))
+(export ~map (define ~map (lambda [op] (lambda [L] (map op L)))))
+(export +: (define +: (lambda [n] (lambda [m] (+ n m)))))
+(export *: (define *: (lambda [m] (lambda [n] (* m n)))))
+(export even? (define even? (lambda [n] (= (% n 2) 0))))
+(export odd? (define odd? (lambda [n] (not (even? n)))))
+; (~ (range 1 10) [(~filter even?) (~map (*: 3)) (~map quote)])
