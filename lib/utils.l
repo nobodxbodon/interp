@@ -81,10 +81,12 @@
 
 (export $ (define $ (lambda [fn] (lambda [] ((kar #args) (apply fn (kdr #args)))))))
 
-(export ~ (lambda [o chain-fn] (cond
-    [(eq chain-fn []) o]
-    [#true (#lambda ((car chain-fn) o) (cdr chain-fn))]
-)))
+;(export ~ (lambda [o chain-fn] (cond
+;    [(eq chain-fn []) o]
+;    [#true (#lambda ((car chain-fn) o) (cdr chain-fn))]
+;)))
+
+(export ~ (lambda [o L] (reduce (lambda [o Fn] (Fn o)) (merge [o] L))))
 
 (export each (define each (lambda [Fn L] (cond
     [(eq L []) #none]
