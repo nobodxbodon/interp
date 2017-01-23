@@ -299,6 +299,11 @@
     [#true (cons (apply Fn (car L)) (#lambda Fn (cdr L)))]
 ))))
 
+(export super-each (define super-each (lambda [Fn L] (cond
+    [(eq L []) #none]
+    [#true (progn (apply Fn (car L)) (#lambda Fn (cdr L)))]
+))))
+
 (export dict-values (define dict-values (lambda [L] ((lambda [i] (cond
     [(> i (length L)) []]
     [#true (cons (cadr (get L i)) (#lambda (inc i)))]
